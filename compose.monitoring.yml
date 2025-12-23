@@ -81,7 +81,7 @@ services:
     environment:
       - ZO_INGEST_ALLOWED_UPTO=876000
       - ZO_FIRST_ADMIN_EMAIL=${OO_ADMIN_EMAIL:-admin@admin.com}
-      - ZO_FIRST_ADMIN_PASSWORD=${OO_ADMIN_PASSWORD:-uMzpjc2oC0IrvQl7}
+      - ZO_FIRST_ADMIN_PASSWORD=${OO_ADMIN_PASSWORD:-test-first-admin}
       - ZO_ROOT_USER_EMAIL=${OPENOBSERVE_EMAIL:-admin@admin.com}
       - ZO_ROOT_USER_PASSWORD=${OPENOBSERVE_PASSWORD:-admin123}
       - ZO_ORG_NAME=${OPENOBSERVE_ORG_NAME:-default}
