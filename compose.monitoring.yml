@@ -1,0 +1,109 @@
+services:
+  influx:
+    image: influxdb:2.7
+    hostname: influx
+    ports:
+      - "8086:8086"
+    volumes:
+      - influx_data:/var/lib/influxdb2
+      - influx_config:/etc/influxdb2
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_INIT_USERNAME:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_INIT_PASSWORD:-password}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUX_INIT_ORG:-stockorg}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUX_INIT_BUCKET:-stockbucket}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_INIT_TOKEN:-influx-token}
+
+  telegraf:
+    image: telegraf:1.30
+    hostname: telegraf
+    depends_on:
+      - influx
+    ports:
+      - "${TELEGRAF_UDP_PORT:-8090}:8090/udp"
+    command:
+      - --config
+      - /etc/telegraf/telegraf.conf
+      - --config-directory
+      - /etc/telegraf/telegraf.d
+    environment:
+      HOSTNAME: telegraf
+      HOST_PROC: /host/proc
+      HOST_SYS: /host/sys
+      HOST_ETC: /host/etc
+      INFLUX_URL: http://influx:8086
+      INFLUX_TOKEN: ${INFLUX_INIT_TOKEN:-influx-token}
+      INFLUX_ORG: ${INFLUX_INIT_ORG:-stockorg}
+      INFLUX_BUCKET: ${INFLUX_INIT_BUCKET:-stockbucket}
+      POSTGRES_DSN: "host=${DB_HOST:-postgres} user=${DB_USER:-root} password=${DB_PASSWORD:-password} dbname=${DB_NAME:-stocks} sslmode=disable"
+    volumes:
+      - ../config/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ../config/telegraf/telegraf.d:/etc/telegraf/telegraf.d:ro
+
+  grafana:
+    image: grafana/grafana
+    hostname: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../config/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../config/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+    depends_on:
+      - influx
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USERNAME:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
+      INFLUX_URL: http://influx:8086
+      INFLUX_TOKEN: ${INFLUX_INIT_TOKEN:-influx-token}
+      INFLUX_ORG: ${INFLUX_INIT_ORG:-stockorg}
+      INFLUX_BUCKET: ${INFLUX_INIT_BUCKET:-stockbucket}
+
+  vector:
+    image: timberio/vector:0.34.X-debian
+    hostname: vector
+    volumes:
+      - ../config/vector/vector.yaml:/etc/vector/vector.yaml:ro
+    ports:
+      - "5000:5000/udp"
+    environment:
+      - OPENOBSERVE_EMAIL=${OPENOBSERVE_EMAIL:-admin@admin.com}
+      - OPENOBSERVE_PASSWORD=${OPENOBSERVE_PASSWORD:-admin123}
+
+  openobserve:
+    image: openobserve/openobserve:latest
+    hostname: openobserve
+    ports:
+      - "5080:5080"
+    depends_on:
+      - vector
+    environment:
+      - ZO_INGEST_ALLOWED_UPTO=876000
+      - ZO_FIRST_ADMIN_EMAIL=${OO_ADMIN_EMAIL:-admin@admin.com}
+      - ZO_FIRST_ADMIN_PASSWORD=${OO_ADMIN_PASSWORD:-uMzpjc2oC0IrvQl7}
+      - ZO_ROOT_USER_EMAIL=${OPENOBSERVE_EMAIL:-admin@admin.com}
+      - ZO_ROOT_USER_PASSWORD=${OPENOBSERVE_PASSWORD:-admin123}
+      - ZO_ORG_NAME=${OPENOBSERVE_ORG_NAME:-default}
+      - ZO_STREAM_NAME=${OPENOBSERVE_STREAM_NAME:-default}
+      - ZO_DATA_DIR=/data
+      - ZO_HTTP_PORT=5080
+    volumes:
+      - openobserve_data:/data
+
+  docker-socket-proxy:
+    image: ghcr.io/tecnativa/docker-socket-proxy:latest
+    hostname: docker-socket-proxy
+    environment:
+      CONTAINERS: 1
+      INFO: 1
+      VERSION: 1
+      EVENTS: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  influx_data:
+  influx_config:
+  grafana_data:
+  openobserve_data:

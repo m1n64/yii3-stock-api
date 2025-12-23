@@ -1,0 +1,203 @@
+{
+    "uid": "postgres-metrics",
+    "title": "PostgreSQL System Metrics",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "10s",
+    "time": {
+        "from": "now-15m",
+        "to": "now"
+    },
+    "timezone": "browser",
+    "tags": ["postgres", "database", "system"],
+    "panels": [
+        {
+            "type": "stat",
+            "title": "Active connections",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and r._field == \"active_connections\")\n  |> last()"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 0,
+                "w": 12,
+                "h": 8
+            }
+        },
+        {
+            "type": "stat",
+            "title": "Idle connections",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and r._field == \"idle_connections\")\n  |> last()"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 0,
+                "w": 12,
+                "h": 8
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "Transactions (commit / rollback)",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and (r._field == \"xact_commit\" or r._field == \"xact_rollback\"))\n  |> aggregateWindow(every: 1m, fn: sum)"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 8,
+                "w": 24,
+                "h": 12
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "Cache hit ratio",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "data = from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and (r._field == \"blks_hit\" or r._field == \"blks_read\"))\n  |> aggregateWindow(every: 1m, fn: sum)\n  |> pivot(rowKey:[\"_time\"], columnKey:[\"_field\"], valueColumn:\"_value\")\n\ndata |> map(fn: (r) => ({ r with _value: float(v: r.blks_hit) / float(v: r.blks_hit + r.blks_read) }))"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percentunit",
+                    "min": 0,
+                    "max": 1
+                }
+            },
+            "gridPos": { "x": 0, "y": 20, "w": 24, "h": 12 }
+        },
+        {
+            "type": "timeseries",
+            "title": "Locks",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and r._field == \"locks\")"
+                }
+            ],
+            "gridPos": { "x": 0, "y": 32, "w": 24, "h": 12 }
+        },
+        {
+            "type": "timeseries",
+            "title": "Tuples activity",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and r._field =~ /tup_(inserted|updated|deleted)/)\n  |> aggregateWindow(every: 1m, fn: sum)"
+                }
+            ],
+            "gridPos": { "x": 0, "y": 44, "w": 24, "h": 12 }
+        },
+        {
+            "type": "timeseries",
+            "title": "Waiting locks",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and r._field == \"waiting_locks\")"
+                }
+            ],
+            "gridPos": { "x": 0, "y": 56, "w": 24, "h": 12 }
+        },
+        {
+            "type": "timeseries",
+            "title": "Deadlocks",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and r._field == \"deadlocks\") |> difference(nonNegative: true)"
+                }
+            ],
+            "gridPos": { "x": 0, "y": 68, "w": 24, "h": 12 }
+        },
+        {
+            "type": "stat",
+            "title": "Idle in transaction",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and r._field == \"idle_in_transaction\")\n  |> last()"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 80,
+                "w": 12,
+                "h": 8
+            }
+        },
+        {
+            "type": "stat",
+            "title": "Connections usage (%)",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and r._field == \"connections_pct\")\n  |> last()"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100
+                }
+            },
+            "gridPos": {
+                "x": 12,
+                "y": 80,
+                "w": 12,
+                "h": 8
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "Long running queries (>30s)",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and r._field == \"long_queries\")"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 88,
+                "w": 24,
+                "h": 12
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "Cache hit ratio",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"postgresql\" and r._field == \"cache_hit_ratio\")"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100
+                }
+            },
+            "gridPos": {
+                "x": 0,
+                "y": 100,
+                "w": 24,
+                "h": 12
+            }
+        }
+    ]
+}

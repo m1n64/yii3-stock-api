@@ -1,0 +1,172 @@
+{
+    "uid": "redis-metrics",
+    "title": "Redis System Metrics",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "10s",
+    "time": {
+        "from": "now-15m",
+        "to": "now"
+    },
+    "timezone": "browser",
+    "tags": ["redis", "cache", "system"],
+    "panels": [
+        {
+            "type": "stat",
+            "title": "Memory used",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and r._field == \"used_memory\")\n  |> last()\n |> map(fn: (r) => ({ r with _value: r._value / 1024 / 1024 }))"
+                }
+            ],
+            "gridPos": { "x": 0, "y": 0, "w": 12, "h": 6 }
+        },
+        {
+            "type": "stat",
+            "title": "Connected clients",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and r._field == \"clients\")\n  |> last()"
+                }
+            ],
+            "gridPos": { "x": 12, "y": 0, "w": 12, "h": 6 }
+        },
+        {
+            "type": "timeseries",
+            "title": "Memory maximum",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and r._field == \"maxmemory\")\n  |> aggregateWindow(every: 1m, fn: max)"
+                }
+            ],
+            "gridPos": { "x": 0, "y": 6, "w": 12, "h": 6 }
+        },
+        {
+            "type": "timeseries",
+            "title": "Memory usage (percentage)",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and (r._field == \"used_memory\" or r._field == \"memory_maximum\"))\n  |> aggregateWindow(every: 1m, fn: sum)\n  |> pivot(rowKey:[\"_time\"], columnKey:[\"_field\"], valueColumn:\"_value\")\n  |> map(fn: (r) => ({ r with _value: r.memory_used / r.memory_maximum * 100 }))"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percentunit",
+                    "min": 0,
+                    "max": 100
+                }
+            },
+            "gridPos": { "x": 0, "y": 12, "w": 12, "h": 6 }
+        },
+        {
+            "type": "stat",
+            "title": "Redis Keyspace Hits",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and r._field == \"keyspace_hits\")\n  |> last()"
+                }
+            ],
+            "gridPos": { "x": 12, "y": 6, "w": 12, "h": 6 }
+        },
+        {
+            "type": "stat",
+            "title": "Redis Keyspace Misses",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and r._field == \"keyspace_misses\")\n  |> last()"
+                }
+            ],
+            "gridPos": { "x": 12, "y": 12, "w": 12, "h": 6 }
+        },
+        {
+            "type": "timeseries",
+            "title": "Cache hit ratio (%)",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and (r._field == \"keyspace_hits\" or r._field == \"keyspace_misses\"))\n  |> aggregateWindow(every: 1m, fn: sum)\n  |> pivot(rowKey:[\"_time\"], columnKey:[\"_field\"], valueColumn:\"_value\")\n  |> map(fn: (r) => ({ r with _value: float(v: r.keyspace_hits) / float(v: r.keyspace_hits + r.keyspace_misses) * 100.0 }))"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100
+                }
+            },
+            "gridPos": { "x": 0, "y": 18, "w": 12, "h": 6 }
+        },
+        {
+            "type": "timeseries",
+            "title": "Evicted keys",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and r._field == \"evicted_keys\")\n  |> difference(nonNegative: true)"
+                }
+            ],
+            "gridPos": { "x": 12, "y": 18, "w": 12, "h": 6 }
+        },
+        {
+            "type": "timeseries",
+            "title": "Commands per second",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and r._field == \"total_commands_processed\")\n  |> difference(nonNegative: true)\n  |> aggregateWindow(every: 1m, fn: mean)"
+                }
+            ],
+            "gridPos": { "x": 0, "y": 24, "w": 12, "h": 6 }
+        },
+        {
+            "type": "stat",
+            "title": "Blocked clients",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and r._field == \"blocked_clients\")\n  |> last()"
+                }
+            ],
+            "gridPos": { "x": 12, "y": 24, "w": 12, "h": 6 }
+        },
+        {
+            "type": "stat",
+            "title": "Memory fragmentation ratio",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and r._field == \"mem_fragmentation_ratio\")\n  |> last()"
+                }
+            ],
+            "gridPos": { "x": 0, "y": 30, "w": 12, "h": 6 }
+        },
+        {
+            "type": "timeseries",
+            "title": "Expired keys",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and r._field == \"expired_keys\")\n  |> difference(nonNegative: true)"
+                }
+            ],
+            "gridPos": { "x": 12, "y": 30, "w": 12, "h": 6 }
+        },
+        {
+            "type": "stat",
+            "title": "Redis uptime (seconds)",
+            "datasource": { "type": "influxdb", "uid": "DS_INFLUXDB" },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"redis\" and r._field == \"uptime\")\n  |> last()\n |> map(fn: (r) => ({ r with _value: r._value / 60 }))"
+                }
+            ],
+            "gridPos": { "x": 0, "y": 36, "w": 12, "h": 6 }
+        }
+    ]
+}

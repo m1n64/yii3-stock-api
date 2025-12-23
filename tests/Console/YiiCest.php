@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Console;
+
+use App\Tests\Support\ConsoleTester;
+
+final readonly class YiiCest
+{
+    public function base(ConsoleTester $I): void
+    {
+        $I->runApp();
+    }
+}

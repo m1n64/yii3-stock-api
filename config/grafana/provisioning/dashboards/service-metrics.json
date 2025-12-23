@@ -1,0 +1,254 @@
+{
+    "uid": "http-app-metrics",
+    "title": "HTTP Application Metrics",
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "time": {
+        "from": "now-15m",
+        "to": "now"
+    },
+    "refresh": "10s",
+    "tags": ["stocks-api", "http", "requests", "system"],
+    "panels": [
+        {
+            "type": "stat",
+            "title": "RPS",
+            "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+            "targets": [
+                {
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"http_request_count\" and r._field == \"value\")\n  |> group()\n  |> aggregateWindow(every: 1m, fn: sum)\n |> fill(value: 0.0)\n |> last()",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "reduceOptions": { "calcs": ["lastNotNull"] },
+                "orientation": "horizontal"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "req/s",
+                    "decimals": 1,
+                    "noValue": "0"
+                }
+            }
+        },
+        {
+            "type": "stat",
+            "title": "P95 latency (Application layer)",
+            "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+            "targets": [
+                {
+                    "refId": "A",
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"http_request_duration_ms\" and r._field == \"value\")\n  |> group()\n  |> quantile(q: 0.95)"
+                }
+            ],
+            "fieldConfig": {
+                "mappings": [],
+                "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                        { "color": "green", "value": null },
+                        { "color": "yellow", "value": 200 },
+                        { "color": "red", "value": 500 }
+                    ]
+                },
+                "defaults": {
+                    "unit": "ms",
+                    "decimals": 1,
+                    "noValue": "0"
+                }
+            },
+            "options": {
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": ["lastNotNull"],
+                    "fields": ""
+                },
+                "orientation": "auto",
+                "textMode": "value",
+                "wideLayout": true,
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "center"
+            }
+        },
+        {
+            "type": "stat",
+            "title": "Error rate %",
+            "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+            "targets": [
+                {
+                    "query": "reqs = from(bucket: v.defaultBucket) |> range(start: -1m) |> filter(fn: (r) => r._measurement == \"http_request_count\") |> aggregateWindow(every: v.windowPeriod, fn: sum) |> group()\n\nerrs = from(bucket: v.defaultBucket) |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"http_error_count\") |> aggregateWindow(every: v.windowPeriod, fn: sum) |> group()\n\njoin(tables: {req: reqs, err: errs}, on: [\"_time\"])\n  |> map(fn: (r) => ({ _time: r._time, _value: if r._value_req > 0.0 then (float(v: r._value_err) / float(v: r._value_req)) * 100.0 else 0.0 }))\n  |> last()",                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "decimals": 2,
+                    "noValue": "0.00"
+                }
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "HTTP Requests / sec (RPS)",
+            "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+            "targets": [
+                {
+                    "refId": "A",
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"http_request_count\" and r._field == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: sum)\n  |> fill(column: \"_value\", value: 0.0)\n  |> yield(name: \"rps\")",
+                    "queryType": "flux"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 2,
+                        "fillOpacity": 15,
+                        "gradientMode": "opacity",
+                        "spanNulls": false,
+                        "showPoints": "never"
+                    },
+                    "mappings": []
+                }
+            },
+            "options": {
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                },
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": ["mean", "max", "last"]
+                }
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "Application latency (ms)",
+            "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+            "targets": [
+                {
+                    "refId": "A",
+                    "query": "base = from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"http_request_duration_ms\" and r._field == \"value\")\n\np50 = base \n  |> aggregateWindow(every: v.windowPeriod, fn: (column, tables=<-) => tables |> quantile(q: 0.50), createEmpty: false)\n  |> map(fn: (r) => ({ _time: r._time, _value: r._value, percentile: \"p50\" }))\n\np95 = base \n  |> aggregateWindow(every: v.windowPeriod, fn: (column, tables=<-) => tables |> quantile(q: 0.95), createEmpty: false)\n  |> map(fn: (r) => ({ _time: r._time, _value: r._value, percentile: \"p95\" }))\n\np99 = base \n  |> aggregateWindow(every: v.windowPeriod, fn: (column, tables=<-) => tables |> quantile(q: 0.99), createEmpty: false)\n  |> map(fn: (r) => ({ _time: r._time, _value: r._value, percentile: \"p99\" }))\n\nunion(tables: [p50, p95, p99])\n  |> group(columns: [\"percentile\"])"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 2
+                    },
+                    "unit": "ms",
+                    "displayName": "${__field.labels.percentile}"
+                }
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "calcs": ["mean", "last", "max"]
+                }
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "HTTP Errors / sec",
+            "gridPos": { "x": 0, "y": 24, "w": 24, "h": 8 },
+            "targets": [
+                {
+                    "refId": "A",
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"http_error_count\" and r._field == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: sum)\n  |> fill(column: \"_value\", value: 0.0)\n  |> yield(name: \"errors\")",
+                    "queryType": "flux"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "color": {
+                        "mode": "fixed",
+                        "fixedColor": "red"
+                    },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineInterpolation": "stepAfter",
+                        "lineWidth": 2,
+                        "fillOpacity": 20,
+                        "gradientMode": "opacity"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "red", "value": 0.1 }
+                        ]
+                    }
+                }
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": ["sum", "max"]
+                }
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "Cache Distribution (Total Count)",
+            "gridPos": { "x": 0, "y": 32, "w": 24, "h": 8 },
+            "targets": [
+                {
+                    "refId": "A",
+                    "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"http_cache_hits\" and r._field == \"value\")\n  |> group(columns: [\"status\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> yield(name: \"absolute_counts\")",                    "queryType": "flux"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "bars",
+                        "stacking": { "mode": "normal", "group": "A" },
+                        "fillOpacity": 100,
+                        "pointSize": 5,
+                        "barAlignment": 0,
+                        "axisCenteredZero": false,
+                        "hideFrom": { "tooltip": false, "viz": false, "legend": false }
+                    },
+                    "unit": "none",
+                    "decimals": 0,
+                    "noValue": "0",
+                    "displayName": "${__field.labels.status}"
+                },
+                "overrides": [
+                    {
+                        "matcher": { "id": "byName", "options": "hit" },
+                        "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+                    },
+                    {
+                        "matcher": { "id": "byName", "options": "miss" },
+                        "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }]
+                    }
+                ]
+            },
+            "options": {
+                "tooltip": { "mode": "multi", "sort": "desc" },
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": ["sum"]
+                }
+            }
+        }
+    ],
+    "templating": { "list": [] },
+    "annotations": { "list": [] }
+}

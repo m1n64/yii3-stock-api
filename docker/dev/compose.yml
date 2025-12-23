@@ -1,0 +1,32 @@
+services:
+  app:
+    build:
+      dockerfile: docker/Dockerfile
+      context: ..
+      target: dev
+      args:
+        USER_ID: ${UID}
+        GROUP_ID: ${GID}
+    hostname: app
+    env_file:
+      - path: ./dev/.env
+      - path: ./dev/override.env
+        required: false
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+      - telegraf
+      - openobserve
+    ports:
+      - "${DEV_PORT:-80}:80"
+    volumes:
+      - ../:/app
+      - ../runtime:/app/runtime
+      - ../config/caddy:/etc/caddy
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      CADDY_GLOBAL_OPTIONS: "admin 0.0.0.0:2019\nservers {\n  metrics\n}"
+    tty: true
+

@@ -1,0 +1,195 @@
+### Environment Variables
+@host = http://localhost/api
+@authToken = generate_a_secure_token_here
+@traceId = test-trace-id
+
+### 1. Create a new city
+POST {{host}}/cities
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+Traceparent: {{traceId}}
+
+{
+    "name": "{{$random.address.cityName}}"
+}
+
+> {%
+    client.test("City created successfully", function() {
+        client.assert(response.status === 200, "Response status is not 201");
+        client.assert(response.body.data.id !== undefined, "City ID is missing");
+    });
+    client.global.set("last_city_id", response.body.data.id);
+%}
+
+### 2. All cities list
+GET {{host}}/cities?page=1&limit=10
+Accept: application/json
+Traceparent: {{traceId}}
+
+> {%
+    client.test("Cities list retrieved successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(Array.isArray(response.body.data.items), "Response data is not an array");
+    });
+
+    const data = response.body.data;
+    if (data.items && data.items.length > 0) {
+        const randomIndex = Math.floor(Math.random() * data.items.length);
+        const randomCity = data.items[randomIndex];
+
+        client.global.set("random_city_id", randomCity.id);
+        console.log("Selected City: " + randomCity.name + " (" + randomCity.id + ")");
+    } else {
+        client.global.set("random_city_id", null);
+        console.log("No cities found!");
+    }
+%}
+
+### 3. Get City by ID
+GET {{host}}/cities/{{last_city_id}}
+Accept: application/json
+Traceparent: {{traceId}}
+
+> {%
+    client.test("City retrieved successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.id === client.global.get("last_city_id"), "City ID does not match");
+    });
+%}
+
+### 4. Update City by ID
+PATCH {{host}}/cities/{{last_city_id}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+Traceparent: {{traceId}}
+
+{
+    "name": "{{$random.address.cityName}}"
+}
+
+> {%
+    client.test("City updated successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.name !== undefined, "City name was not updated");
+    });
+%}
+
+### 5. Delete City by ID
+DELETE {{host}}/cities/{{last_city_id}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+Traceparent: {{traceId}}
+
+> {%
+    client.test("City deleted successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### 6. Get stocks by City ID
+GET {{host}}/cities/{{random_city_id}}/stocks
+Accept: application/json
+Traceparent: {{traceId}}
+
+> {%
+    client.test("Stocks by City ID retrieved successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(Array.isArray(response.body.data.items), "Response data is not an array");
+    });
+%}
+
+### 7. Create a new stock
+POST {{host}}/stocks
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+Traceparent: {{traceId}}
+
+{
+    "city_id": "{{random_city_id}}",
+    "address": "{{$random.address.streetAddress}}",
+    "lat": {{$random.address.latitude}},
+    "lng": {{$random.address.longitude}}
+}
+
+> {%
+    client.test("Stock created successfully", function() {
+        client.assert(response.status === 200, "Response status is not 201");
+        client.assert(response.body.data.id !== undefined, "Stock ID is missing");
+    });
+    client.global.set("last_stock_id", response.body.data.id);
+%}
+
+### 8. All stocks list
+GET {{host}}/stocks?page=1&limit=10
+Accept: application/json
+Traceparent: {{traceId}}
+
+> {%
+    client.test("Stocks list retrieved successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(Array.isArray(response.body.data.items), "Response data is not an array");
+    });
+%}
+
+### 9. Get Stock by ID
+GET {{host}}/stocks/{{last_stock_id}}
+Accept: application/json
+Traceparent: {{traceId}}
+
+> {%
+    client.test("Stock retrieved successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.id === client.global.get("last_stock_id"), "Stock ID does not match");
+    });
+%}
+
+### 10. Update Stock by ID
+PATCH {{host}}/stocks/{{last_stock_id}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+Accept: application/json
+Traceparent: {{traceId}}
+
+{
+    "address": "{{$random.address.streetAddress}}"
+}
+
+> {%
+    client.test("Stock updated successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.address !== undefined, "Stock address was not updated");
+    });
+%}
+
+### 11. Delete Stock by ID
+DELETE {{host}}/stocks/{{last_stock_id}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+Traceparent: {{traceId}}
+
+> {%
+    client.test("Stock deleted successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### 12. Find nearby stocks
+POST {{host}}/stocks/nearby
+Content-Type: application/json
+Accept: application/json
+Traceparent: {{traceId}}
+
+{
+    "lat": {{$random.address.latitude}},
+    "lng": {{$random.address.longitude}}
+}
+
+> {%
+    client.test("Nearby stocks retrieved successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.data.distance_meters !== undefined, "Distance data is missing");
+    });
+%}

@@ -1,0 +1,3 @@
+handle /metrics {
+    metrics
+}

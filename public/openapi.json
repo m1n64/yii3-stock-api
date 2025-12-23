@@ -1,0 +1,1099 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "City & Stock API",
+        "description": "Service to manage cities and their stock information.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost/api",
+            "description": "Local Development"
+        }
+    ],
+    "paths": {
+        "/cities": {
+            "get": {
+                "tags": [
+                    "Cities"
+                ],
+                "summary": "List all cities",
+                "description": "Returns a paginated list of cities available in the system.",
+                "operationId": "getCitiesList",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for results pagination",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of cities",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "allOf": [
+                                                        {
+                                                            "$ref": "#/components/schemas/PaginationMeta"
+                                                        },
+                                                        {
+                                                            "properties": {
+                                                                "items": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "$ref": "#/components/schemas/CityDto"
+                                                                    }
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Cities"
+                ],
+                "summary": "Create a new city",
+                "operationId": "createCity",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CityRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "City created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/CityDto"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity (Validation Errors)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/cities/{id}": {
+            "get": {
+                "tags": [
+                    "Cities"
+                ],
+                "summary": "Get city details by ID",
+                "operationId": "getCityById",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "City UUID or ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "City details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/CityDto"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "City not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Cities"
+                ],
+                "summary": "Delete a city",
+                "operationId": "deleteCity",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    "404": {
+                        "description": "City not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Cities"
+                ],
+                "summary": "Update an existing city",
+                "operationId": "updateCity",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the city to update",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CityRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "City updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/CityDto"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "City not found"
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity (Validation Errors)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/cities/{id}/stocks": {
+            "get": {
+                "tags": [
+                    "Cities"
+                ],
+                "summary": "List of stocks by city",
+                "description": "Returns a paginated list of stocks from selected city.",
+                "operationId": "getCityStockList",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the city",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for results pagination",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of stocks",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "allOf": [
+                                                        {
+                                                            "$ref": "#/components/schemas/PaginationMeta"
+                                                        },
+                                                        {
+                                                            "properties": {
+                                                                "items": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "$ref": "#/components/schemas/StockDto"
+                                                                    }
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "City not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/stocks": {
+            "get": {
+                "tags": [
+                    "Stocks"
+                ],
+                "summary": "List all stocks",
+                "description": "Returns a paginated list of stocks.",
+                "operationId": "getStocksList",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for results pagination",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of stocks",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "allOf": [
+                                                        {
+                                                            "$ref": "#/components/schemas/PaginationMeta"
+                                                        },
+                                                        {
+                                                            "properties": {
+                                                                "items": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "$ref": "#/components/schemas/StockDto"
+                                                                    }
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Stocks"
+                ],
+                "summary": "Create a new stock",
+                "operationId": "createStock",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateStockRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "City created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/StockDto"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity (Validation Errors)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/stocks/{id}": {
+            "get": {
+                "tags": [
+                    "Stocks"
+                ],
+                "summary": "Get stock details by ID",
+                "operationId": "getStockById",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Stock UUID or ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Stock details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/CityDto"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Stock not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Stocks"
+                ],
+                "summary": "Delete a stock",
+                "operationId": "deleteStock",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    "404": {
+                        "description": "City not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Stocks"
+                ],
+                "summary": "Update an existing stock",
+                "operationId": "updateStock",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the stock to update",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateStockRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Stock updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/StockDto"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Stock not found"
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity (Validation Errors)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/stocks/nearby": {
+            "post": {
+                "tags": [
+                    "Stocks"
+                ],
+                "summary": "Find the nearest stock by coordinates",
+                "operationId": "getNearbyStock",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TraceparentHeader"
+                    },
+                    {
+                        "$ref": "#/components/parameters/ContentTypeHeader"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NearbyStockRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The closest stock found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/NearbyStockDto"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity (Validation Errors)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No stocks found"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "PaginationMeta": {
+                "properties": {
+                    "page_size": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "current_page": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "total_pages": {
+                        "type": "integer",
+                        "example": 2
+                    }
+                },
+                "type": "object"
+            },
+            "ApiResponse": {
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "example": "success"
+                    },
+                    "data": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "ValidationErrorResponse": {
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "example": "error"
+                    },
+                    "errors": {
+                        "type": "object",
+                        "example": {
+                            "name": [
+                                "The name field is required.",
+                                "Too short."
+                            ]
+                        },
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "CityRequest": {
+                "title": "City Request Model",
+                "description": "Payload for creating or updating a city",
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "description": "The name of the city",
+                        "type": "string",
+                        "maxLength": 255,
+                        "minLength": 2,
+                        "example": "Berlin"
+                    }
+                },
+                "type": "object"
+            },
+            "CityDto": {
+                "title": "City Model",
+                "description": "Data transfer object representing a city entity",
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "London"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-12-21T15:00:00Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-12-21T15:00:00Z",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CreateStockRequest": {
+                "title": "Stock Model",
+                "description": "Data transfer object representing a stock entity",
+                "required": [
+                    "city_id",
+                    "address",
+                    "lat",
+                    "lng"
+                ],
+                "properties": {
+                    "city_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "Baker st. 221b"
+                    },
+                    "lat": {
+                        "type": "number",
+                        "format": "float",
+                        "example": "51.523767"
+                    },
+                    "lng": {
+                        "type": "number",
+                        "format": "float",
+                        "example": "-0.1585557"
+                    }
+                },
+                "type": "object"
+            },
+            "NearbyStockRequest": {
+                "title": "Nearby Stock Request Model",
+                "description": "Data transfer object for requesting nearby stocks based on latitude and longitude",
+                "required": [
+                    "lat",
+                    "lng"
+                ],
+                "properties": {
+                    "lat": {
+                        "type": "number",
+                        "format": "float",
+                        "example": -65.38491
+                    },
+                    "lng": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 170.51276
+                    }
+                },
+                "type": "object"
+            },
+            "NearbyStockDto": {
+                "title": "Nearby Stock Response Model",
+                "description": "Data transfer object representing a nearby stock with its distance",
+                "properties": {
+                    "stock": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/StockDto"
+                            },
+                            {
+                                "properties": {
+                                    "city": {
+                                        "$ref": "#/components/schemas/CityDto"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        ]
+                    },
+                    "distance_meters": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 6007911.53
+                    }
+                },
+                "type": "object"
+            },
+            "StockDto": {
+                "title": "Stock Model",
+                "description": "Data transfer object representing a stock entity",
+                "required": [
+                    "id",
+                    "city_id",
+                    "address",
+                    "lat",
+                    "lng"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "city_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "Baker st. 221b"
+                    },
+                    "lat": {
+                        "type": "number",
+                        "format": "float",
+                        "example": "51.523767"
+                    },
+                    "lng": {
+                        "type": "number",
+                        "format": "float",
+                        "example": "-0.1585557"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateStockRequest": {
+                "title": "Stock Model",
+                "description": "Data transfer object representing a stock entity",
+                "properties": {
+                    "city_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "Baker st. 221b"
+                    },
+                    "lat": {
+                        "type": "number",
+                        "format": "float",
+                        "example": "51.523767"
+                    },
+                    "lng": {
+                        "type": "number",
+                        "format": "float",
+                        "example": "-0.1585557"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "parameters": {
+            "TraceparentHeader": {
+                "name": "Traceparent",
+                "in": "header",
+                "description": "W3C Trace Context for distributed tracing",
+                "required": false,
+                "schema": {
+                    "type": "string",
+                    "example": "00-0d449f32dca6d73df88ca6c9e5d8a081-5fd9dbc51c009077-01"
+                }
+            },
+            "ContentTypeHeader": {
+                "name": "Content-Type",
+                "in": "header",
+                "description": "Indicates the media type of the resource",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "default": "application/json"
+                }
+            }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Enter your API token in the format: Bearer <token>",
+                "name": "Authorization",
+                "in": "header",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Cities",
+            "description": "Cities"
+        },
+        {
+            "name": "Stocks",
+            "description": "Stocks"
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+sources:
+    php_udp:
+        type: socket
+        mode: udp
+        address: 0.0.0.0:5000
+        decoding:
+            codec: json
+
+sinks:
+    openobserve:
+        type: http
+        inputs: ["php_udp"]
+        uri: "http://openobserve:5080/api/default/default/_json"
+        auth:
+            strategy: basic
+            user: "${OPENOBSERVE_EMAIL}"
+            password: "${OPENOBSERVE_PASSWORD}"
+        encoding:
+            codec: json
+        batch:
+            max_events: 1000
+            timeout_secs: 1
