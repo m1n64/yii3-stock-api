@@ -30,6 +30,7 @@ The project follows a hybrid of **Clean Architecture** and **DDD** principles to
 - **Data Mapper Pattern**: Entities are decoupled from the database schema using CycleORM.
 - **Domain-Driven Design**: Logic is encapsulated within Domain Entities and Services.
 - **Infrastructure Isolation**: External dependencies (Metrics, Logging, Sockets) are abstracted behind interfaces.
+- **Events**: Applied selectively to handle secondary concerns such as cache invalidation.
 
 > **Note**  
 > This architecture emphasizes explicit structure and exploration of Yii3 capabilities.

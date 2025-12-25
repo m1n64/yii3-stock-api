@@ -11,12 +11,19 @@ use ReflectionClass;
 
 class MapperFactoryTest extends Unit
 {
+    private MapperFactory $mapperFactory;
+
+    protected function _before()
+    {
+        $this->mapperFactory = new MapperFactory();
+    }
+
     public function testMapItemReturnsDtoForRegisteredEntity(): void
     {
         $city = new City('Los Santos');
         $this->setPrivateProperty($city, 'id', 'uuid-atlantis-123');
 
-        $result = MapperFactory::mapItem($city);
+        $result = $this->mapperFactory->mapItem($city);
 
         $this->assertInstanceOf(CityDto::class, $result);
         $this->assertSame('Los Santos', $result->name);
@@ -32,7 +39,7 @@ class MapperFactoryTest extends Unit
         $proxyCity = new \App\Domain\Entity\CityProxy('Silent Hill');
         $this->setPrivateProperty($proxyCity, 'id', 'uuid-silent-hill-666');
 
-        $result = MapperFactory::mapItem($proxyCity);
+        $result = $this->mapperFactory->mapItem($proxyCity);
 
         $this->assertInstanceOf(CityDto::class, $result);
         $this->assertSame('Silent Hill', $result->name);
@@ -43,15 +50,15 @@ class MapperFactoryTest extends Unit
         $item = new \stdClass();
         $item->data = 'Night City';
 
-        $result = MapperFactory::mapItem($item);
+        $result = $this->mapperFactory->mapItem($item);
 
         $this->assertSame($item, $result);
     }
 
     public function testMapItemHandlesScalars(): void
     {
-        $this->assertSame('Raccoon City', MapperFactory::mapItem('Raccoon City'));
-        $this->assertSame(42, MapperFactory::mapItem(42));
+        $this->assertSame('Raccoon City', $this->mapperFactory->mapItem('Raccoon City'));
+        $this->assertSame(42, $this->mapperFactory->mapItem(42));
     }
 
     private function setPrivateProperty(object $object, string $propertyName, mixed $value): void

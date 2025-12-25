@@ -9,7 +9,7 @@ final class MapperFactory
      * @param mixed $item
      * @return mixed
      */
-    public static function mapItem(mixed $item): mixed
+    public function mapItem(mixed $item): mixed
     {
         if (is_object($item)) {
             $class = $item::class;

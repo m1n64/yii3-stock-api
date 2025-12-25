@@ -9,17 +9,17 @@ use App\Domain\Entity\City;
 interface CityRepositoryInterface extends TransactionalRepositoryInterface
 {
     /**
-     * @param string $id
-     * @return City|null
-     */
-    public function findById(string $id): City|null;
-
-    /**
      * @param int $limit
      * @param int $offset
      * @return City[]
      */
     public function findAll(int $limit, int $offset): array;
+
+    /**
+     * @param string $id
+     * @return City|null
+     */
+    public function getById(string $id): City|null;
 
     /**
      * @param City $city

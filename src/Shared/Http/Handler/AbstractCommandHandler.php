@@ -9,9 +9,7 @@ use App\Shared\Application\Pagination\PaginatedResult;
 use App\Shared\Http\Presenter\OffsetPaginatorPresenter;
 use App\Shared\Http\ResponseFactory;
 use App\Transport\Http\Mapper\MapperFactory;
-use App\Transport\Http\Mapper\MapperRegistry;
 use Psr\Http\Message\ResponseInterface;
-use Yiisoft\Arrays\ArrayHelper;
 use Yiisoft\Http\Status;
 use Yiisoft\Hydrator\HydratorInterface;
 use Yiisoft\Router\CurrentRoute;
@@ -25,6 +23,7 @@ abstract class AbstractCommandHandler implements HandlerInterface
      * @param CommandBusInterface $bus
      * @param ResponseFactory $response
      * @param CurrentRoute $route
+     * @param MapperFactory $mapperFactory
      */
     public function __construct(
         protected HydratorInterface $hydrator,
@@ -32,6 +31,7 @@ abstract class AbstractCommandHandler implements HandlerInterface
         protected CommandBusInterface $bus,
         protected ResponseFactory $response,
         protected CurrentRoute $route,
+        private MapperFactory $mapperFactory,
     )
     {
     }
@@ -56,14 +56,18 @@ abstract class AbstractCommandHandler implements HandlerInterface
             return $this->response->failValidation($validation);
         }
 
-        $result = $this->bus->dispatch($command);
-        if (!$result) {
-            return $this->response->notFound();
-        }
+        try {
+            $result = $this->bus->dispatch($command);
+            if (!$result) {
+                return $this->response->notFound();
+            }
 
-        return $onSuccess
-            ? $onSuccess($result)
-            : $this->response->success($result);
+            return $onSuccess
+                ? $onSuccess($result)
+                : $this->response->success($result);
+        } catch (\Exception $exception) {
+            return $this->response->fail($exception->getMessage(), code: $exception->getCode() ?? Status::INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
@@ -83,7 +87,7 @@ abstract class AbstractCommandHandler implements HandlerInterface
             commandClass: $commandClass,
             data: $data,
             onSuccess: function ($response) use ($onSuccess) {
-                $mapped = MapperFactory::mapItem($response);
+                $mapped = $this->mapperFactory->mapItem($response);
 
                 return $onSuccess
                     ? $onSuccess($mapped)
@@ -108,7 +112,7 @@ abstract class AbstractCommandHandler implements HandlerInterface
      */
     protected function paginateResponseWithMapper(PaginatedResult $result): ResponseInterface
     {
-        $result = $result->populateItems(fn(mixed $item) => MapperFactory::mapItem($item));
+        $result = $result->populateItems(fn(mixed $item) => $this->mapperFactory->mapItem($item));
 
         return $this->paginateResponse($result);
     }

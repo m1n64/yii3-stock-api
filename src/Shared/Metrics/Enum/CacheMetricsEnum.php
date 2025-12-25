@@ -5,5 +5,5 @@ namespace App\Shared\Metrics\Enum;
 
 enum CacheMetricsEnum: string
 {
-    case HTTP_CACHE_HITS = 'http_cache_hits';
+    case HttpCacheHits = 'http_cache_hits';
 }

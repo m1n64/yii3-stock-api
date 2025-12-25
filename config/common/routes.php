@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Enum\EntityTypeEnum;
 use App\Shared\Http\Middlewares\AuthMiddleware;
 use App\Transport\Http\Handler\City\GetCityStockListHandler;
 use App\Transport\Http\Handler\Stock\CreateHandler;
@@ -48,6 +49,7 @@ return [
 
             Route::get('/cities/{id}')
                 ->middleware(FindByIdCacheMiddleware::class)
+                ->defaults(['entity' => EntityTypeEnum::City->value])
                 ->action(\App\Transport\Http\Handler\City\GetByIdHandler::class)
                 ->name('city/by-id'),
 
@@ -75,6 +77,7 @@ return [
                 ->name('stock/list'),
 
             Route::get('/stocks/{id}')
+                ->defaults(['entity' => EntityTypeEnum::Stock->value])
                 ->middleware(FindByIdCacheMiddleware::class)
                 ->action(GetByIdHandler::class)
                 ->name('stock/by-id'),

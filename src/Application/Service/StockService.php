@@ -6,12 +6,14 @@ namespace App\Application\Service;
 use App\Application\Service\Concern\HasTransactionalTrait;
 use App\Domain\Contract\TransactionalRepositoryInterface;
 use App\Domain\Entity\Stock;
+use App\Domain\Event\Stock\StockChanged;
 use App\Domain\Model\NearbyStockResult;
 use App\Domain\Repository\CityRepositoryInterface;
 use App\Domain\Repository\StockRepositoryInterface;
 use App\Shared\Application\Pagination\PaginatedResult;
 use App\Shared\Application\Pagination\PaginationValueObject;
 use InvalidArgumentException;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 
 
@@ -23,11 +25,13 @@ readonly class StockService
      * @param StockRepositoryInterface $repository
      * @param CityRepositoryInterface $cityRepository
      * @param LoggerInterface $logger
+     * @param EventDispatcherInterface $eventDispatcher
      */
     public function __construct(
         private StockRepositoryInterface $repository,
         private CityRepositoryInterface $cityRepository,
         private LoggerInterface $logger,
+        private EventDispatcherInterface $eventDispatcher,
     )
     {
     }
@@ -109,7 +113,7 @@ readonly class StockService
     public function create(string $cityId, string $address, float $lat, float $lng): Stock
     {
         return $this->transactional('Create stock', function () use ($cityId, $address, $lat, $lng): Stock {
-            $city = $this->cityRepository->findById($cityId);
+            $city = $this->cityRepository->getById($cityId);
             if (!$city) {
                 $this->logger->error("City not found with ID: $cityId");
                 throw new \InvalidArgumentException("City not found with ID: $cityId");
@@ -123,6 +127,7 @@ readonly class StockService
             );
 
             $this->repository->save($stock);
+
             return $stock;
         });
     }
@@ -146,7 +151,7 @@ readonly class StockService
             }
 
             if ($cityId !== null) {
-                $city = $this->cityRepository->findById($cityId);
+                $city = $this->cityRepository->getById($cityId);
                 if (!$city) {
                     $this->logger->error("City not found with ID: $cityId");
                     throw new \InvalidArgumentException("City not found with ID: $cityId");
@@ -167,6 +172,9 @@ readonly class StockService
             }
 
             $this->repository->save($stock);
+
+            $this->dispatchStockChanged($stock->getId(), $stock->getLat(), $stock->getLng());
+
             return $stock;
         });
     }
@@ -186,6 +194,8 @@ readonly class StockService
             }
 
             $this->repository->delete($stock);
+
+            $this->dispatchStockChanged($stock->getId(), $stock->getLat(), $stock->getLng());
         });
     }
 
@@ -228,5 +238,16 @@ readonly class StockService
     protected function getRepository(): TransactionalRepositoryInterface
     {
         return $this->repository;
+    }
+
+    /**
+     * @param string $stockId
+     * @param float $lat
+     * @param float $lng
+     * @return void
+     */
+    private function dispatchStockChanged(string $stockId, float $lat, float $lng): void
+    {
+        $this->eventDispatcher->dispatch(new StockChanged($stockId, $lat, $lng));
     }
 }

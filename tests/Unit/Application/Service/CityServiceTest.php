@@ -5,29 +5,40 @@ namespace App\Tests\Application\Service;
 
 use App\Application\Service\CityService;
 use App\Domain\Entity\City;
+use App\Domain\Event\City\CityChanged;
 use App\Domain\Repository\CityRepositoryInterface;
 use App\Shared\Application\Pagination\PaginatedResult;
 use Codeception\Test\Unit;
 use InvalidArgumentException;
 use PHPUnit\Framework\MockObject\MockObject;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
+use ReflectionClass;
 
 class CityServiceTest extends Unit
 {
     protected CityRepositoryInterface|MockObject $repository;
     protected LoggerInterface|MockObject $logger;
+    protected EventDispatcherInterface|MockObject $eventDispatcher;
     protected CityService $service;
 
     protected function _before(): void
     {
         $this->repository = $this->createMock(CityRepositoryInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
+        $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
 
-        $this->repository->method('transaction')->willReturnCallback(function ($callback) {
-            return $callback();
-        });
+        $this->repository
+            ->method('transaction')
+            ->willReturnCallback(static function ($callback) {
+                return $callback();
+            });
 
-        $this->service = new CityService($this->repository, $this->logger);
+        $this->eventDispatcher
+            ->method('dispatch')
+            ->willReturnCallback(fn ($event) => $event);
+
+        $this->service = new CityService($this->repository, $this->logger, $this->eventDispatcher);
     }
 
     public function testGetAllCities(): void
@@ -58,7 +69,7 @@ class CityServiceTest extends Unit
         $city = new City('New York');
 
         $this->repository->expects($this->once())
-            ->method('findById')
+            ->method('getById')
             ->with($cityId)
             ->willReturn($city);
 
@@ -71,7 +82,7 @@ class CityServiceTest extends Unit
     {
         $cityId = 'non-existent';
 
-        $this->repository->method('findById')->willReturn(null);
+        $this->repository->method('getById')->willReturn(null);
 
         $this->logger->expects($this->once())
             ->method('warning')
@@ -85,7 +96,7 @@ class CityServiceTest extends Unit
     public function testUpdateCityThrowsExceptionWhenNotFound(): void
     {
         $cityId = 'unknown';
-        $this->repository->method('findById')->with($cityId)->willReturn(null);
+        $this->repository->method('getById')->with($cityId)->willReturn(null);
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("City with ID $cityId not found");
@@ -97,9 +108,12 @@ class CityServiceTest extends Unit
     {
         $cityId = '123';
         $city = new City('London');
+        $this->setProperties($city, [
+            'id' => $cityId,
+        ]);
 
         $this->repository->expects($this->once())
-            ->method('findById')
+            ->method('getById')
             ->with($cityId)
             ->willReturn($city);
 
@@ -113,10 +127,19 @@ class CityServiceTest extends Unit
     public function testDeleteCityThrowsExceptionWhenNotFound(): void
     {
         $cityId = 'missing';
-        $this->repository->method('findById')->with($cityId)->willReturn(null);
+        $this->repository->method('getById')->with($cityId)->willReturn(null);
 
         $this->expectException(InvalidArgumentException::class);
 
         $this->service->delete($cityId);
+    }
+
+    private function setProperties(object $object, array $data): void
+    {
+        $reflection = new ReflectionClass($object);
+        foreach ($data as $property => $value) {
+            $prop = $reflection->getProperty($property);
+            $prop->setValue($object, $value);
+        }
     }
 }

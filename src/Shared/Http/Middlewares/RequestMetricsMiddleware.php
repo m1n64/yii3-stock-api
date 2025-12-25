@@ -47,11 +47,11 @@ final class RequestMetricsMiddleware implements MiddlewareInterface
             $statusCode = $response?->getStatusCode() ?? Status::INTERNAL_SERVER_ERROR;
 
             $tags = compact('method', 'path', 'statusCode');
-            $this->metricsClient->timing(HttpMetricsEnum::HTTP_REQUEST_DURATION, $durationMs, $tags, $timestampNs);
-            $this->metricsClient->increment(HttpMetricsEnum::HTTP_REQUEST_COUNT, 1, $tags, $timestampNs);
+            $this->metricsClient->timing(HttpMetricsEnum::HttpRequestDurationMs, $durationMs, $tags, $timestampNs);
+            $this->metricsClient->increment(HttpMetricsEnum::HttpRequestCount, 1, $tags, $timestampNs);
 
             if ($statusCode >= 500) {
-                $this->metricsClient->increment(HttpMetricsEnum::HTTP_ERROR_COUNT, 1, ['statusCode' => $statusCode], $timestampNs);
+                $this->metricsClient->increment(HttpMetricsEnum::HttpErrorCount, 1, ['statusCode' => $statusCode], $timestampNs);
             }
 
             $this->logger->info("Request (app) finished for $durationMs ms with $statusCode status code", [

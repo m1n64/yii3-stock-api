@@ -5,6 +5,6 @@ namespace App\Shared\Metrics\Enum\CacheMetrics;
 
 enum CacheStatusEnum: string
 {
-    case HIT = 'hit';
-    case MISS = 'miss';
+    case Hit = 'hit';
+    case Miss = 'miss';
 }

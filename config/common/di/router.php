@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Shared\Http\Middlewares\RequestMetricsMiddleware;
+use App\Shared\Http\Middlewares\TraceMiddleware;
 use Yiisoft\Config\Config;
 use Yiisoft\Router\RouteCollection;
 use Yiisoft\Router\RouteCollectionInterface;
@@ -13,7 +15,7 @@ return [
     RouteCollectionInterface::class =>
         static fn(RouteCollectorInterface $collector) => new RouteCollection(
             $collector->addRoute(...$config->get('routes'))
-                ->middleware(\App\Shared\Http\Middlewares\TraceMiddleware::class)
-                ->middleware(\App\Shared\Http\Middlewares\RequestMetricsMiddleware::class),
+                ->middleware(TraceMiddleware::class)
+                ->middleware(RequestMetricsMiddleware::class),
         ),
 ];

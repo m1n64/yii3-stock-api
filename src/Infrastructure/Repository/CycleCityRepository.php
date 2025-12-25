@@ -24,17 +24,6 @@ class CycleCityRepository implements CityRepositoryInterface
     }
 
     /**
-     * @param string $id
-     * @return City|null
-     */
-    public function findById(string $id): City|null
-    {
-        return $this->select()
-            ->where(['city_id' => $id])
-            ->fetchOne();
-    }
-
-    /**
      * @param int $limit
      * @param int $offset
      * @return array|City[]
@@ -46,6 +35,17 @@ class CycleCityRepository implements CityRepositoryInterface
             ->offset($offset)
             ->orderBy('created_at', 'DESC')
             ->fetchAll();
+    }
+
+    /**
+     * @param string $id
+     * @return City|null
+     */
+    public function getById(string $id): City|null
+    {
+        return $this->select()
+            ->where(['city_id' => $id])
+            ->fetchOne();
     }
 
     /**

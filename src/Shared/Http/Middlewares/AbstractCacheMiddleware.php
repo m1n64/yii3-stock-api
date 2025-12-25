@@ -56,11 +56,9 @@ abstract class AbstractCacheMiddleware implements MiddlewareInterface
             }
 
             $this->logger->info("Cache hit for key: {$cacheKey}, returning cached response.");
-            $this->sendCacheMetrics(CacheStatusEnum::HIT);
+            $this->sendCacheMetrics(CacheStatusEnum::Hit);
 
-            // Maybe Sliding Expiration from parameter, but we need to invalidate cache...
-
-            return $response->withHeader('X-Cache', 'HIT')->withHeader('Cache-Control', 'public, max-age=' . $this->getTtl());
+            return $response->withHeader('X-Cache', 'HIT');
         }
 
         $response = $handler->handle($request);
@@ -75,9 +73,9 @@ abstract class AbstractCacheMiddleware implements MiddlewareInterface
             ], $this->getTtl());
         }
 
-        $this->sendCacheMetrics(CacheStatusEnum::MISS);
+        $this->sendCacheMetrics(CacheStatusEnum::Miss);
 
-        return $response->withHeader('X-Cache', 'MISS')->withHeader('Cache-Control', 'public, max-age=' . $this->getTtl());
+        return $response->withHeader('X-Cache', 'MISS');
     }
 
     /**
@@ -98,11 +96,11 @@ abstract class AbstractCacheMiddleware implements MiddlewareInterface
     private function sendCacheMetrics(CacheStatusEnum $status): void
     {
         $this->metricsClient->increment(
-            CacheMetricsEnum::HTTP_CACHE_HITS,
+            CacheMetricsEnum::HttpCacheHits,
             1,
             [
-                MetricsLabelEnum::STATUS->value => $status,
-                MetricsLabelEnum::ROUTE->value => $this->route->getName() ?? 'unknown',
+                MetricsLabelEnum::Status->value => $status,
+                MetricsLabelEnum::Route->value => $this->route->getName() ?? 'unknown',
             ]
         );
     }

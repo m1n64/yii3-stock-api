@@ -6,18 +6,22 @@ namespace App\Tests\Application\Service;
 use App\Application\Service\StockService;
 use App\Domain\Entity\City;
 use App\Domain\Entity\Stock;
+use App\Domain\Event\Stock\StockChanged;
 use App\Domain\Repository\CityRepositoryInterface;
 use App\Domain\Repository\StockRepositoryInterface;
 use Codeception\Test\Unit;
 use InvalidArgumentException;
 use PHPUnit\Framework\MockObject\MockObject;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
+use ReflectionClass;
 
 class StockServiceTest extends Unit
 {
     protected StockRepositoryInterface|MockObject $repository;
     protected CityRepositoryInterface|MockObject $cityRepository;
     protected LoggerInterface|MockObject $logger;
+    protected EventDispatcherInterface|MockObject $eventDispatcher;
     protected StockService $service;
 
     protected function _before(): void
@@ -27,15 +31,26 @@ class StockServiceTest extends Unit
         $this->repository = $this->createMock(StockRepositoryInterface::class);
         $this->cityRepository = $this->createMock(CityRepositoryInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
+        $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
 
-        $this->repository->method('transaction')->willReturnCallback(static function (callable $callback): mixed {
-            return $callback();
-        });
+        $this->repository->method('transaction')
+            ->willReturnCallback(static function (callable $callback): mixed {
+                try {
+                    return $callback();
+                } catch (InvalidArgumentException|\Throwable $e) {
+                    throw $e;
+                }
+            });
+
+        $this->eventDispatcher
+            ->method('dispatch')
+            ->willReturnCallback(fn ($event) => $event);
 
         $this->service = new StockService(
             $this->repository,
             $this->cityRepository,
-            $this->logger
+            $this->logger,
+            $this->eventDispatcher,
         );
     }
 
@@ -45,7 +60,7 @@ class StockServiceTest extends Unit
         $city = new City('Almaty');
 
         $this->cityRepository->expects($this->once())
-            ->method('findById')
+            ->method('getById')
             ->with($cityId)
             ->willReturn($city);
 
@@ -87,7 +102,10 @@ class StockServiceTest extends Unit
     public function testDeleteStockSuccess(): void
     {
         $id = 'id-to-delete';
-        $stock = $this->createMock(Stock::class);
+        $stock = new Stock(new City('Warshaw'), 'Str Dong', 10.0123, 20.2340);
+        $this->setProperties($stock, [
+            'id' => $id,
+        ]);
 
         $this->repository->method('getById')->with($id)->willReturn($stock);
 
@@ -96,5 +114,24 @@ class StockServiceTest extends Unit
             ->with($stock);
 
         $this->service->delete($id);
+    }
+
+    public function testDeleteCityThrowsExceptionWhenNotFound(): void
+    {
+        $stockId = 'missing';
+        $this->repository->method('getById')->with($stockId)->willReturn(null);
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->service->delete($stockId);
+    }
+
+    private function setProperties(object $object, array $data): void
+    {
+        $reflection = new ReflectionClass($object);
+        foreach ($data as $property => $value) {
+            $prop = $reflection->getProperty($property);
+            $prop->setValue($object, $value);
+        }
     }
 }

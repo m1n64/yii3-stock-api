@@ -6,10 +6,12 @@ namespace App\Application\Service;
 use App\Application\Service\Concern\HasTransactionalTrait;
 use App\Domain\Contract\TransactionalRepositoryInterface;
 use App\Domain\Entity\City;
+use App\Domain\Event\City\CityChanged;
 use App\Domain\Repository\CityRepositoryInterface;
 use App\Shared\Application\Pagination\PaginatedResult;
 use App\Shared\Application\Pagination\PaginationValueObject;
 use InvalidArgumentException;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 
 readonly class CityService
@@ -19,10 +21,12 @@ readonly class CityService
     /**
      * @param CityRepositoryInterface $repository
      * @param LoggerInterface $logger
+     * @param EventDispatcherInterface $eventDispatcher
      */
     public function __construct(
         private CityRepositoryInterface $repository,
         private LoggerInterface $logger,
+        private EventDispatcherInterface $eventDispatcher,
     )
     {
     }
@@ -59,7 +63,7 @@ readonly class CityService
     {
         $this->logger->info(sprintf('Fetching city with ID: %s', $id));
 
-        $city = $this->repository->findById($id);
+        $city = $this->repository->getById($id);
 
         if (!$city) {
             $this->logger->warning(sprintf('City with ID %s not found', $id));
@@ -101,6 +105,8 @@ readonly class CityService
             $city->setName($name);
             $this->repository->save($city);
 
+            $this->dispatchCityChanged($city->getId());
+
             return $city;
         });
     }
@@ -121,6 +127,8 @@ readonly class CityService
             }
 
             $this->repository->delete($city);
+
+            $this->dispatchCityChanged($city->getId());
         });
     }
 
@@ -138,5 +146,14 @@ readonly class CityService
     protected function getRepository(): TransactionalRepositoryInterface
     {
         return $this->repository;
+    }
+
+    /**
+     * @param string $cityId
+     * @return void
+     */
+    private function dispatchCityChanged(string $cityId): void
+    {
+        $this->eventDispatcher->dispatch(new CityChanged($cityId));
     }
 }

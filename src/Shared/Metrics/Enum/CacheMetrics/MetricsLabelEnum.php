@@ -5,6 +5,6 @@ namespace App\Shared\Metrics\Enum\CacheMetrics;
 
 enum MetricsLabelEnum: string
 {
-    case STATUS = 'status';
-    case ROUTE = 'route';
+    case Status = 'status';
+    case Route = 'route';
 }
